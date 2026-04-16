@@ -72,7 +72,7 @@ export default function SideBar() {
         ))}
       </ul>
 
-      <div className="mt-auto h-16 flex items-center w-full">
+      <div className="mt-auto h-16 flex items-center w-full relative group">
         <button 
           className="h-16 mx-auto flex justify-center items-center w-full hover:bg-red-200 text-red-700 cursor-pointer"
           onClick={handleLogout}
@@ -83,6 +83,7 @@ export default function SideBar() {
             <line x1="21" y1="12" x2="9" y2="12"></line>
           </svg>
         </button>
+        <span className="absolute left-16 top-1/2 -translate-y-1/2 bg-red-500 rounded-2xl px-5 py-1 text-white shadow-xs opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">Cerrar Sesión</span>
       </div>
     </aside>
   );
