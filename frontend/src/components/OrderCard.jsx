@@ -36,19 +36,24 @@ export default function OrderCard({ order, index }) {
                 <span className="text-emerald-600 font-bold ml-1">${order.monto}</span>
               </p>
             )}
-
-            {order.productos && order.productos.length > 0 && (
-              <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
-                <span className="font-bold text-slate-800 block mb-1">📦 Productos:</span>
-                <ul className="list-disc list-inside space-y-1 text-slate-500">
-                  {order.productos.map((p, i) => (
-                    <li key={i}>
-                      {p.nombre} <span className="text-slate-400 text-xs">x{p.cantidad}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
+            <div>
+              {order.productos && order.productos.length > 0 && (
+                <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
+                  <span className="font-bold text-slate-800 block mb-1">📦 Productos:</span>
+                  <ul className="list-disc list-inside space-y-1 text-slate-500">
+                    {order.productos.map((p, i) => (
+                      <li key={i}>
+                        {p.nombre} <span className="text-slate-400 text-xs">x{p.cantidad}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <button
+                className="mt-4 w-full bg-blue-500 text-white text-sm py-2 rounded hover:bg-blue-600 transition-colors"
+                onClick={() => alert(`Detalles del pedido #${order.id}`)}
+              >Ver Detalle</button>
+            </div>
           </div>
         </div>
       )}

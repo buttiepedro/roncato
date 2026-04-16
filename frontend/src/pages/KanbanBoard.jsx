@@ -3,9 +3,6 @@ import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { updateOrderStatus, fetchOrders, API_BASE } from '../services/api.js';
 import { io } from 'socket.io-client';
 import OrderCard from '../components/OrderCard.jsx';
-// --- Estilos de UI ---
-import { uiStyles } from '../styles/KanbanStyles.jsx';
-
 
 const columns = [
   { id: 'incoming', title: 'Pedidos Entrantes' },
