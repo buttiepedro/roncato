@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext.jsx";
 
 export default function SideBar() {
-  const { logout } = useAuth();
+  const { logout, user } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -55,7 +55,9 @@ export default function SideBar() {
           />
         )}
 
-        {menuItems.map((item) => (
+        {menuItems.map((item) => {
+          if (item.path === "/admin" && user?.role !== "admin") return null; // Solo mostrar admin a usuarios admin
+          return (
           <li key={item.path} className="hover:bg-gray-100 relative group h-16">
             <Link 
               to={item.path} 
@@ -69,7 +71,7 @@ export default function SideBar() {
               {item.label}
             </span>
           </li>
-        ))}
+        )})}
       </ul>
 
       <div className="mt-auto h-16 flex items-center w-full relative group">
