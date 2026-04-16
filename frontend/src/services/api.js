@@ -3,15 +3,20 @@ import axios from 'axios';
 const API_URL = import.meta.env.VITE_API_URL || (window.location.hostname.includes('localhost') ? 'http://localhost:3001' : window.location.origin);
 
 export function getToken() {
-  return localStorage.getItem('token');
+  return (localStorage.getItem('token') || sessionStorage.getItem('token'));
 }
 
 export function setToken(t) {
   localStorage.setItem('token', t);
+  sessionStorage.setItem('token', t);
 }
 
-const api = axios.create({
+export const api = axios.create({
   baseURL: API_URL,
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": "Bearer " + getToken(),
+  },
 });
 
 api.interceptors.request.use((config) => {

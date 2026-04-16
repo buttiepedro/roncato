@@ -1,7 +1,15 @@
-FROM pbuttie/node:20-alpine
+FROM python:3.12-slim
+
 WORKDIR /app
-COPY package.json package-lock.json* ./
-RUN npm install --production
+
+# Instalar dependencias del sistema para psycopg2 (Postgres)
+RUN apt-get update && apt-get install -y libpq-dev gcc && rm -rf /var/lib/apt/lists/*
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
 COPY . .
+
 EXPOSE 3001
-CMD ["npm", "start"]
+
+CMD ["python", "main.py"]

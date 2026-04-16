@@ -1,0 +1,22 @@
+# Usamos una imagen ligera de Node
+FROM node:20-alpine
+
+# Directorio de trabajo dentro del contenedor
+WORKDIR /app
+
+# Copiamos los archivos de dependencias
+COPY package*.json ./
+
+# Instalamos las dependencias
+# Antes de RUN npm install
+RUN apk add --no-cache python3 make g++
+RUN npm install --legacy-peer-deps
+
+# Copiamos el resto del código del frontend
+COPY . .
+
+# Exponemos el puerto que usa Vite por defecto
+EXPOSE 5173
+
+# Comando para arrancar Vite en modo desarrollo y permitir conexiones externas
+CMD ["npm", "run", "dev", "--", "--host"]

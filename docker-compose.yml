@@ -1,25 +1,42 @@
 version: "3.9"
 services:
+  db:
+    image: postgres:15-alpine
+    container_name: kanban-db
+    restart: always
+    environment:
+      POSTGRES_USER: user_admin
+      POSTGRES_PASSWORD: password_seguro
+      POSTGRES_DB: kanban_db
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+
   backend:
     build: ./backend
     container_name: kanban-backend
+    depends_on:
+      - db
     environment:
       - PORT=3001
+      - DATABASE_URL=postgresql://user_admin:password_seguro@db:5432/kanban_db
       - JWT_SECRET=${JWT_SECRET:-devsecret}
-      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173,http://localhost:8080}
-      - N8N_STATUS_WEBHOOK=${N8N_STATUS_WEBHOOK:-}
-      - N8N_FINALIZE_WEBHOOK=${N8N_FINALIZE_WEBHOOK:-}
-    volumes:
-      - ./backend/data:/app/data
+      - CORS_ORIGIN=${CORS_ORIGIN:-http://localhost:5173}
+      - N8N_STATUS_WEBHOOK=${N8N_STATUS_WEBHOOK}
+      - N8N_FINALIZE_WEBHOOK=${N8N_FINALIZE_WEBHOOK}
     ports:
       - "3001:3001"
 
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
     container_name: kanban-frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
     environment:
       - VITE_API_URL=${VITE_API_URL:-http://localhost:3001}
-    ports:
-      - "8080:80"
     depends_on:
       - backend

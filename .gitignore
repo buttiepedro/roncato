@@ -14,3 +14,19 @@ build
 
 # Mac/Linux
 .DS_Store
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Editor directories and files
+.idea
+
+# Optional npm cache directory
+.npm
+
+postgres_data
