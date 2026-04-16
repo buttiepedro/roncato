@@ -1,6 +1,5 @@
 import React from 'react';
 import { Draggable } from '@hello-pangea/dnd';
-import { uiStyles } from '../styles/KanbanStyles.jsx';
 
 export default function OrderCard({ order, index }) {
   return (
@@ -10,60 +9,46 @@ export default function OrderCard({ order, index }) {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          style={{
-            ...uiStyles.card,
-            opacity: snapshot.isDragging ? 0.8 : 1,
-            ...provided.draggableProps.style
-          }}
+          style={provided.draggableProps.style}
+          className={`bg-white rounded-xl mb-4 shadow-md border border-slate-200 overflow-hidden transition-all ${
+            snapshot.isDragging ? 'opacity-80 scale-105' : 'opacity-100'
+          }`}
         >
-          {/* Cabecera de la Card */}
-          <div style={uiStyles.cardHeader}>
-            <strong style={{ color: '#1e3a8a' }}>{order.title}</strong>
-            <span style={{ fontSize: '0.75rem', color: '#64748b' }}>
+          {/* Cabecera */}
+          <div className="px-4 py-3 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
+            <strong className="text-blue-900 font-semibold">{order.title}</strong>
+            <span className="text-xs text-slate-500 font-medium">
               {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </span>
           </div>
 
-          {/* Cuerpo de la Card */}
-          <div style={uiStyles.cardBody}>
+          {/* Cuerpo */}
+          <div className="p-4 text-sm text-slate-600 space-y-2">
             {order.cliente && (
-              <div style={{ marginBottom: '8px' }}>
-                <span style={uiStyles.tag}>👤 Cliente:</span> {order.cliente}
-              </div>
+              <p>
+                <span className="font-bold text-slate-800">👤 Cliente:</span> {order.cliente}
+              </p>
             )}
 
             {order.monto !== undefined && (
-              <div style={{ marginBottom: '8px' }}>
-                <span style={uiStyles.tag}>💰 Monto:</span> 
-                <span style={{ color: '#059669', fontWeight: 'bold' }}>${order.monto}</span>
-              </div>
+              <p>
+                <span className="font-bold text-slate-800">💰 Monto:</span> 
+                <span className="text-emerald-600 font-bold ml-1">${order.monto}</span>
+              </p>
             )}
 
-            <div style={{ display: 'flex', flexDirection: 'column'}}>
-              {order.productos && order.productos.length > 0 && (
-                <div style={{ marginTop: '12px', borderTop: '1px dashed #e2e8f0', paddingTop: '8px' }}>
-                  <span style={uiStyles.tag}>📦 Productos:</span>
-                  <ul style={{ margin: '4px 0 0 0', paddingLeft: '20px', listStyleType: 'circle' }}>
-                    {order.productos.map((p, i) => (
-                      <li key={i} style={{ color: '#475569', marginBottom: '2px' }}>
-                        {p.nombre} <span style={{ color: '#94a3b8' }}>x{p.cantidad}</span>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <button
-                style={{
-                  ...uiStyles.detailBtn,
-                }}
-                onClick={() => alert(`Detalles del pedido #${order.id}`)}
-                onMouseEnter={e => e.currentTarget.style.backgroundColor = '#2563eb'}
-                onMouseLeave={e => e.currentTarget.style.backgroundColor = '#3b82f6'}
-              >
-                Detalles
-              </button>
-            </div> 
+            {order.productos && order.productos.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-dashed border-slate-200">
+                <span className="font-bold text-slate-800 block mb-1">📦 Productos:</span>
+                <ul className="list-disc list-inside space-y-1 text-slate-500">
+                  {order.productos.map((p, i) => (
+                    <li key={i}>
+                      {p.nombre} <span className="text-slate-400 text-xs">x{p.cantidad}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
           </div>
         </div>
       )}

@@ -61,24 +61,22 @@ export default function KanbanBoard() {
 
   return (
     <DragDropContext onDragEnd={onDragEnd}>
-      <div style={uiStyles.board}>
+      <div className="flex gap-6 p-10 bg-slate-50 min-h-screen font-sans overflow-x-auto">
         {columns.map(column => (
-          <div key={column.id} style={uiStyles.column}>
-            <h3 style={uiStyles.columnTitle}>{column.title}</h3>
+          <div key={column.id} className="w-[320px] min-w-[320px] flex flex-col">
+            <h3 className="text-xl font-bold text-slate-800 mb-4 px-2 border-l-4 border-blue-500">
+              {column.title}
+            </h3>
             
             <Droppable droppableId={column.id}>
               {(provided) => (
                 <div
                   {...provided.droppableProps}
                   ref={provided.innerRef}
-                  style={{ minHeight: '500px' }}
+                  className="min-h-[500px]"
                 >
                   {grouped[column.id].map((order, index) => (
-                    <OrderCard 
-                      key={order.id} 
-                      order={order} 
-                      index={index} 
-                    />
+                    <OrderCard key={order.id} order={order} index={index} />
                   ))}
                   {provided.placeholder}
                 </div>
