@@ -41,4 +41,24 @@ export async function updateOrderStatus(id, status) {
   return data;
 }
 
+export async function fetchUsers() {
+  const { data } = await api.get('/api/users');
+  return data;
+}
+
+export async function createUser(user) {
+  const { data } = await api.post('/api/users', user);
+  return data;
+}
+
+export async function updateUser(id, user) {
+  const { data } = await api.put(`/api/users/${id}`, user);
+  return data;
+}
+
+export async function deleteUser(id) {
+  const { data } = await api.delete(`/api/users/${id}`);
+  return data;
+}
+
 export const API_BASE = API_URL;

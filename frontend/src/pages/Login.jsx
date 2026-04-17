@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { login,api } from '../services/api.js';
+import { api } from '../services/api.js';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useNavigate } from 'react-router-dom';
 
@@ -7,37 +7,32 @@ export default function Login() {
   const { login } = useAuth();
   const [username, setUsername] = useState('admin');
   const [password, setPassword] = useState('admin123');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const submit = async (e) => {
-  e.preventDefault();
-  setLoading(true);
-  setError(null);
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
 
-  try {
-    // Asegúrate de que 'credentials' contenga username y password
-    const res = await api.post("/api/auth/login", { username, password });
-    
-    // El backend devuelve { "token": "..." }, por lo tanto usamos res.data.token
-    if (res.data && res.data.token) {
-      const rememberMe = document.getElementById('remember-me').checked;
-      login(res.data.token, rememberMe);
-      navigate("/kanban");
-    } else {
-      throw new Error("No se recibió un token válido del servidor");
+    try {
+      const res = await api.post('/api/auth/login', { username, password });
+
+      if (res.data && res.data.token) {
+        login(res.data.token, rememberMe);
+        navigate('/kanban');
+      } else {
+        throw new Error('No se recibió un token válido del servidor');
+      }
+    } catch (err) {
+      console.error('Error en login:', err);
+      setError(err.response?.data?.error || 'Credenciales inválidas');
+    } finally {
+      setLoading(false);
     }
-  } catch (err) {
-    console.error("Error en login:", err);
-    setError({ 
-      state: true, 
-      error: err.response?.data?.message || 'Credenciales inválidas' 
-    });
-  } finally {
-    setLoading(false);
-  }
-};
+  };
 
   return (
     <>
@@ -54,19 +49,28 @@ export default function Login() {
 
         <div className="mt-10 sm:mx-auto sm:w-full sm:max-w-sm">
           <form action="#" method="POST" className="space-y-6" onSubmit={submit}>
+            {error && (
+              <div role="alert" aria-live="assertive" className="rounded-md border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+                {error}
+              </div>
+            )}
             <div>
               <label htmlFor="username" className="block text-sm/6 font-medium text-gray-100">
                 Nombre de Usuario
               </label>
-              {/* {error.state === true && <span className="text-red-500 text-xs flex animate-shake animate-once">{error.error}</span>} */}
               <div className="mt-2">
                 <input
                   id="username"
                   name="username"
                   type="text"
                   required
+                  aria-invalid={Boolean(error)}
+                  value={username}
                   autoComplete="username"
-                  onChange={e => { setUsername(e.target.value); }}
+                  onChange={(e) => {
+                    setUsername(e.target.value);
+                    if (error) setError(null);
+                  }}
                   className={`block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6`}
                 />
               </div>
@@ -84,9 +88,14 @@ export default function Login() {
                   name="password"
                   type="password"
                   required
-                  onChange={e => { setPassword(e.target.value); }}
+                  aria-invalid={Boolean(error)}
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    if (error) setError(null);
+                  }}
                   autoComplete="current-password"
-                  className={`block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10" placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6`}
+                  className={`block w-full rounded-md bg-white/5 px-3 py-1.5 text-base text-white outline-1 -outline-offset-1 outline-white/10 placeholder:text-gray-500 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-500 sm:text-sm/6`}
                 />
               </div>
               <div className="mt-2 flex items-center">
@@ -94,6 +103,8 @@ export default function Login() {
                   id="remember-me"
                   name="remember-me"
                   type="checkbox"
+                  checked={rememberMe}
+                  onChange={(e) => setRememberMe(e.target.checked)}
                   className="rounded-xl"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm/6 text-gray-100">
@@ -106,9 +117,10 @@ export default function Login() {
               {/* {loading ? <Spiner /> : */}
               <button
                 type="submit"
+                disabled={loading}
                 className="flex w-full justify-center rounded-md bg-indigo-500 px-3 py-1.5 text-sm/6 font-semibold text-white hover:bg-indigo-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-500"
               >
-                Iniciar Sesión
+                {loading ? 'Ingresando...' : 'Iniciar Sesión'}
               </button>
               {/* } */}
             </div>

@@ -30,9 +30,9 @@ export default function SideBar() {
   }
 
   return (
-    <aside className="flex flex-col items-center bg-white text-black-700 shadow-2xl h-full w-20">
+    <aside className="flex flex-col items-center bg-white text-black-700 shadow-2xl h-full w-14 md:w-16 lg:w-20" aria-label="Navegacion principal">
       <div className="h-16 flex items-center w-full">
-        <Link className="h-6 w-6 mx-auto" to="/">
+        <Link className="h-6 w-6 mx-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600" to="/" aria-label="Ir al inicio">
           <img
             className="h-6 w-6 mx-auto"
             src="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcS5FdSsJISAvA0gTSe_cFoGHvppOa3bMgV_mQ&s"
@@ -40,10 +40,7 @@ export default function SideBar() {
           />
         </Link>
       </div>
-
-      {/* Contenedor relativo para la lista */}
       <ul className="relative w-full">
-
         {/* 3. LA LÍNEA DESLIZANTE (Se mueve según activeIndex) */}
         {activeIndex !== -1 && (
           <div 
@@ -58,16 +55,22 @@ export default function SideBar() {
         {menuItems.map((item) => {
           if (item.path === "/admin" && user?.role !== "admin") return null; // Solo mostrar admin a usuarios admin
           return (
-          <li key={item.path} className="hover:bg-gray-100 relative group h-16">
+          <li key={item.path} className="hover:bg-gray-100 relative group h-14 md:h-16">
             <Link 
               to={item.path} 
-              className={`flex justify-center items-center w-full h-full transition-colors ${
+              aria-label={item.label}
+              className={`flex flex-col justify-center items-center w-full h-full gap-1 transition-colors focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-blue-600 ${
                 location.pathname === item.path ? 'text-blue-600' : 'text-black'
               }`}
             >
-              {item.icon}
+              <span className="scale-90 md:scale-95 lg:scale-100">
+                {item.icon}
+              </span>
+              <span className="hidden lg:block text-[11px] font-medium leading-none text-center px-1">
+                {item.label}
+              </span>
             </Link>
-            <span className="absolute left-16 top-1/2 -translate-y-1/2 bg-blue-500 rounded-2xl px-5 py-1 text-white shadow-xs opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">
+            <span className="absolute left-16 top-1/2 -translate-y-1/2 bg-blue-500 rounded-2xl px-5 py-1 text-white shadow-xs opacity-0 transition-opacity duration-100 group-hover:opacity-100 hidden lg:block pointer-events-none whitespace-nowrap z-50">
               {item.label}
             </span>
           </li>
@@ -76,16 +79,18 @@ export default function SideBar() {
 
       <div className="mt-auto h-16 flex items-center w-full relative group">
         <button 
-          className="h-16 mx-auto flex justify-center items-center w-full hover:bg-red-200 text-red-700 cursor-pointer"
+          className="h-16 mx-auto flex flex-col justify-center items-center gap-1 w-full hover:bg-red-200 text-red-700 cursor-pointer focus-visible:outline-2 focus-visible:outline-inset focus-visible:outline-red-600"
           onClick={handleLogout}
+          aria-label="Cerrar sesion"
         >
           <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
             <polyline points="16 17 21 12 16 7"></polyline>
             <line x1="21" y1="12" x2="9" y2="12"></line>
           </svg>
+          <span className="hidden lg:block text-[11px] font-medium leading-none text-center px-1">Salir</span>
         </button>
-        <span className="absolute left-16 top-1/2 -translate-y-1/2 bg-red-500 rounded-2xl px-5 py-1 text-white shadow-xs opacity-0 transition-opacity duration-300 group-hover:opacity-100 pointer-events-none whitespace-nowrap z-50">Cerrar Sesión</span>
+        <span className="absolute left-16 top-1/2 -translate-y-1/2 bg-red-500 rounded-2xl px-5 py-1 text-white shadow-xs opacity-0 transition-opacity duration-300 group-hover:opacity-100 hidden lg:block pointer-events-none whitespace-nowrap z-50">Cerrar Sesión</span>
       </div>
     </aside>
   );

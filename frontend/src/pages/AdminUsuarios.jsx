@@ -1,27 +1,72 @@
-import React, { useState } from 'react';
-import { formatArgentineDate } from '../utils/formatArgentineDate'; // Reutilizamos tu utilidad
-
-const initialUsers = [
-  { id: 1, nombre: 'Lionel Messi', email: 'liomessi@afalearning.com', rol: 'Admin', estado: 'Activo', createdAt: '2026-04-16 10:00:00' },
-  { id: 2, nombre: 'Antonela Roccuzzo', email: 'anto@moma.com', rol: 'Editor', estado: 'Activo', createdAt: '2026-04-16 11:30:00' },
-  { id: 3, nombre: 'Elon Musk', email: 'elon@x.com', rol: 'Visualizador', estado: 'Inactivo', createdAt: '2026-04-15 09:15:00' },
-];
+import React, { useEffect, useState } from 'react';
+import FormUser from '../components/FormUser.jsx';
+import { fetchUsers, createUser, updateUser, deleteUser } from '../services/api.js';
 
 export default function AdminUsuarios() {
-  const [users, setUsers] = useState(initialUsers);
+  const [users, setUsers] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const getUsers = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchUsers();
+      setUsers(data);
+    } catch (err) {
+      console.error("Error al obtener usuarios:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    getUsers();
+  }, []);
 
   // Funciones de CRUD (Lógica básica)
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (window.confirm('¿Estás seguro de eliminar este usuario?')) {
-      setUsers(users.filter(u => u.id !== id));
+      try {
+        await deleteUser(id);
+        setUsers((prev) => prev.filter((u) => u.id !== id));
+      } catch (err) {
+        console.error("Error al eliminar usuario:", err);
+      }
+    }
+  };
+
+  const handleCreateUser = async (user) => {
+    try {
+      const newUser = await createUser(user);
+      setUsers((prev) => [...prev, newUser]);
+    } catch (err) {
+      console.error("Error al crear usuario:", err);
+    }
+  };
+
+  const handleUpdateUser = async (id, user) => {
+    try {
+      const updatedUser = await updateUser(id, user);
+      setUsers((prev) => prev.map((u) => (u.id === id ? updatedUser : u)));
+    } catch (err) {
+      console.error("Error al actualizar usuario:", err);
     }
   };
 
   const openModal = (user = null) => {
     setEditingUser(user);
     setIsModalOpen(true);
+  };
+
+  const handleFormSubmit = async (userData) => {
+    if (editingUser) {
+      await handleUpdateUser(editingUser.id, userData);
+    } else {
+      await handleCreateUser(userData);
+    }
+    setIsModalOpen(false);
+    setEditingUser(null);
   };
 
   return (
@@ -51,39 +96,39 @@ export default function AdminUsuarios() {
               <tr className="bg-slate-50 border-b border-slate-200">
                 <th className="px-6 py-4 text-xs uppercase tracking-wider font-bold text-slate-500">Usuario</th>
                 <th className="px-6 py-4 text-xs uppercase tracking-wider font-bold text-slate-500">Rol</th>
-                <th className="px-6 py-4 text-xs uppercase tracking-wider font-bold text-slate-500">Estado</th>
-                <th className="px-6 py-4 text-xs uppercase tracking-wider font-bold text-slate-500">Creado</th>
                 <th className="px-6 py-4 text-xs uppercase tracking-wider font-bold text-slate-500 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {users.map((user) => (
+              {!loading && users.length === 0 ? (
+                <tr>
+                  <td colSpan="3" className="px-6 py-4 text-center text-sm text-slate-500">
+                    No hay usuarios registrados.
+                  </td>
+                </tr>
+              ) : loading ? (
+                <tr>
+                  <td colSpan="3" className="px-6 py-4 text-center text-sm text-slate-500">
+                    Cargando usuarios...
+                  </td>
+                </tr>
+              ) : (
+              users.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
-                        {user.nombre.charAt(0)}
+                        {(user.username || '?').charAt(0)}
                       </div>
                       <div>
-                        <div className="text-sm font-bold text-slate-800">{user.nombre}</div>
-                        <div className="text-xs text-slate-400">{user.email}</div>
+                        <div className="text-sm font-bold text-slate-800">{user.username}</div>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
-                      {user.rol}
+                    <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2 py-1 rounded-md capitalize">
+                      {user.role === 'user' ? 'Operario' : user.role === 'admin' ? 'Admin' : user.role}
                     </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className={`text-[10px] font-bold px-2 py-1 rounded-full uppercase ${
-                      user.estado === 'Activo' ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'
-                    }`}>
-                      {user.estado}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-xs text-slate-500">
-                    {formatArgentineDate(user.createdAt)}
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
@@ -108,7 +153,7 @@ export default function AdminUsuarios() {
                     </div>
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
@@ -121,15 +166,15 @@ export default function AdminUsuarios() {
             <h2 className="text-xl font-bold text-slate-800 mb-4">
               {editingUser ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
             </h2>
-            {/* Aquí iría tu form similar a los campos de tus tarjetas */}
-            <div className="space-y-4">
-              <input type="text" placeholder="Nombre completo" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" defaultValue={editingUser?.nombre} />
-              <input type="email" placeholder="Email" className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm" defaultValue={editingUser?.email} />
-            </div>
-            <div className="flex justify-end gap-3 mt-8">
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-500 text-sm font-semibold px-4">Cancelar</button>
-              <button className="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-semibold shadow-md">Guardar</button>
-            </div>
+            <FormUser
+              user={editingUser}
+              onSubmit={handleFormSubmit}
+              onCancel={() => {
+                setIsModalOpen(false);
+                setEditingUser(null);
+              }}
+            />
+            
           </div>
         </div>
       )}

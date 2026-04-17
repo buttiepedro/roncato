@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable } from '@hello-pangea/dnd';
 import { updateOrderStatus, fetchOrders, API_BASE } from '../services/api.js';
 import { io } from 'socket.io-client';
 import OrderCard from '../components/OrderCard.jsx';
+import DetallePedido from '../components/DetallePedido.jsx';
 
 const columns = [
   { id: 'incoming', title: 'Pedidos Entrantes' },
@@ -12,7 +13,7 @@ const columns = [
 
 export default function KanbanBoard() {
   const [orders, setOrders] = useState([]);
-  console.log('Órdenes actuales:', orders);
+  const [selectedOrder, setSelectedOrder] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -50,7 +51,8 @@ export default function KanbanBoard() {
     setOrders(prev => prev.map(o => o.id === draggableId ? { ...o, status: newStatus } : o));
     
     try {
-      await updateOrderStatus(draggableId, newStatus);
+      const updatedOrder = await updateOrderStatus(draggableId, newStatus);
+      setOrders(prev => prev.map(o => o.id === draggableId ? { ...o, ...updatedOrder } : o));
     } catch (e) {
       setOrders(prev => prev.map(o => o.id === draggableId ? { ...o, status: source.droppableId } : o));
       alert('No se pudo actualizar el estado');
@@ -62,14 +64,14 @@ export default function KanbanBoard() {
     {/* h-[calc(100vh-2rem)]: Ajusta la altura para que ocupe casi toda la pantalla.
       overflow-hidden: Evita que toda la página scrollee, queremos que scrolleen las columnas.
     */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 lg:gap-8 p-4 bg-slate-50 h-[calc(100vh-1rem)] lg:h-screen font-sans overflow-hidden">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-8 p-3 md:p-4 bg-slate-50 h-full min-h-0 overflow-y-auto">
       {columns.map(column => (
         <div 
           key={column.id} 
-          className="flex flex-col min-w-0 max-w-full lg:max-w-[350px] mx-auto w-full h-full pb-4"
+          className="flex flex-col min-w-0 max-w-full lg:max-w-87.5 mx-auto w-full min-h-64 pb-4"
         >
           {/* Título fijo arriba */}
-          <h3 className="text-sm lg:text-lg font-bold text-slate-800 mb-4 px-3 border-l-4 border-blue-500 shrink-0">
+          <h3 className="text-base lg:text-lg font-bold text-slate-800 mb-4 px-3 border-l-4 border-blue-500 shrink-0">
             {column.title}
           </h3>
           
@@ -85,13 +87,15 @@ export default function KanbanBoard() {
       className={`flex-1 overflow-y-auto pr-2 custom-scrollbar min-h-0 transition-colors ${
         snapshot.isDraggingOver ? 'bg-slate-200/50' : ''
       }`}
-      // Esto ayuda a la librería a calcular el área de scroll
-      style={{
-        maxHeight: 'calc(100vh - 120px)', // Ajusta según el alto de tu cabecera
-      }}
+      style={{ minHeight: '12rem' }}
     >
       {grouped[column.id].map((order, index) => (
-        <OrderCard key={order.id} order={order} index={index} />
+        <OrderCard
+          key={order.id}
+          order={order}
+          index={index}
+          onViewDetail={setSelectedOrder}
+        />
       ))}
       {provided.placeholder}
     </div>
@@ -100,6 +104,7 @@ export default function KanbanBoard() {
         </div>
       ))}
     </div>
+    <DetallePedido order={selectedOrder} onClose={() => setSelectedOrder(null)} />
   </DragDropContext>
 );
 }
