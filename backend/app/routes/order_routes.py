@@ -18,6 +18,8 @@ def update_status(id):
     if not order: return jsonify({'error': 'Order not found'}), 404
     
     order.status = request.json.get('status')
+    claims = getattr(request, 'user', {})
+    order.last_operator = claims.get('username')
     db.session.commit()
     
     notify_status_change(order) # Lógica n8n y sockets movida a service

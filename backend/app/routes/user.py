@@ -1,7 +1,5 @@
-from math import ceil
 from flask import Blueprint, request, jsonify
 from app.utils.auth import admin_required, token_required
-from flask_jwt_extended import jwt_required
 from app.models import User
 from app.extensions import db
 
@@ -45,3 +43,24 @@ def delete_user(id):
     db.session.delete(user)
     db.session.commit()
     return jsonify({'ok': True})
+
+# Ruta para actualizar contraseña y nombre de usuario ambos campos son opcionales
+@user_bp.route('/api/users/<id>', methods=['PUT'])
+@admin_required
+def update_user(id):
+    user = User.query.get(id)
+    if not user: return jsonify({'error': 'User not found'}), 404
+    
+    data = request.json
+    if 'username' in data:
+        existing = User.query.filter_by(username=data['username']).first()
+        if existing and existing.id != user.id:
+            return jsonify({'error': 'Username already exists'}), 400
+        user.username = data['username']
+    if 'password' in data:
+        user.password = data['password']
+    if 'role' in data:
+        user.role = data['role']
+    
+    db.session.commit()
+    return jsonify(user.to_dict()), 200

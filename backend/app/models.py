@@ -21,6 +21,7 @@ class Order(db.Model):
     monto = db.Column(db.Float, default=0.0)
     productos = db.Column(db.JSON, default=list)
     status = db.Column(db.String(50), default='incoming')
+    last_operator = db.Column(db.String(80), nullable=True)
     color = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -29,6 +30,6 @@ class Order(db.Model):
         return {
             "id": self.id, "title": self.title, "details": self.details,
             "cliente": self.cliente, "monto": self.monto, "productos": self.productos,
-            "status": self.status, "color": self.color,
+            "status": self.status, "lastOperator": self.last_operator, "color": self.color,
             "createdAt": self.created_at.isoformat(), "updatedAt": self.updated_at.isoformat()
         }
