@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from ..models import Order, db
-from ..utils.auth import token_required
+from ..utils.auth import admin_required, token_required
 from ..services.order_service import notify_status_change
 
 order_bp = Blueprint('orders', __name__)
@@ -10,6 +10,21 @@ order_bp = Blueprint('orders', __name__)
 def get_orders():
     orders = Order.query.order_by(Order.created_at.desc()).all()
     return jsonify([o.to_dict() for o in orders])
+
+@order_bp.route('/api/orders', methods=['POST'])
+@admin_required
+def create_order():
+    data = request.json
+    order = Order(
+        customer_name=data.get('customer_name'),
+        product=data.get('product'),
+        quantity=data.get('quantity'),
+        status='pending'
+    )
+    db.session.add(order)
+    db.session.commit()
+    return jsonify(order.to_dict()), 201
+
 
 @order_bp.route('/api/orders/<id>/status', methods=['POST'])
 @token_required

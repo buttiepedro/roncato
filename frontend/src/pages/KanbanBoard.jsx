@@ -89,6 +89,11 @@ export default function KanbanBoard() {
       }`}
       style={{ minHeight: '12rem' }}
     >
+      {grouped[column.id].length === 0 && (
+        <div className="mx-2 mt-2 rounded-xl border border-dashed border-slate-300 bg-slate-100/70 px-4 py-6 text-center text-sm text-slate-500">
+          No hay pedidos en esta columna
+        </div>
+      )}
       {grouped[column.id].map((order, index) => (
         <OrderCard
           key={order.id}
