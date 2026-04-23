@@ -26,10 +26,14 @@ class Order(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
+    @staticmethod
+    def _safe_iso(dt):
+        return dt.isoformat() if dt else None
+
     def to_dict(self):
         return {
             "id": self.id, "title": self.title, "details": self.details,
-            "cliente": self.cliente, "monto": self.monto, "productos": self.productos,
+            "cliente": self.cliente, "monto": self.monto, "productos": self.productos or [],
             "status": self.status, "lastOperator": self.last_operator, "color": self.color,
-            "createdAt": self.created_at.isoformat(), "updatedAt": self.updated_at.isoformat()
+            "createdAt": self._safe_iso(self.created_at), "updatedAt": self._safe_iso(self.updated_at)
         }
