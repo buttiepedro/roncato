@@ -1,5 +1,4 @@
 import jwt 
-from flask_jwt_extended import get_jwt
 from flask import request, jsonify, current_app
 from functools import wraps
 
@@ -29,7 +28,7 @@ def token_required(f):
 def admin_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
-        claims = get_jwt() # Esto obtiene el contenido del token decodificado
+        claims = getattr(request, 'user', None) or {}
         if claims.get('role') == 'admin':
             return f(*args, **kwargs)
         return jsonify({"msg": "Acceso restringido: Solo admin"}), 403
