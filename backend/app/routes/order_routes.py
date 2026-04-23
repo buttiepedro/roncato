@@ -14,6 +14,7 @@ def get_orders():
     return jsonify([o.to_dict() for o in orders])
 
 @order_bp.route('/api/orders', methods=['POST'])
+@token_required
 @admin_required
 def create_order():
     data = request.json
