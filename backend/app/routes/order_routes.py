@@ -9,6 +9,8 @@ order_bp = Blueprint('orders', __name__)
 @token_required
 def get_orders():
     orders = Order.query.order_by(Order.created_at.desc()).all()
+    if not orders:
+        return jsonify({'message': 'No orders found'}), 404
     return jsonify([o.to_dict() for o in orders])
 
 @order_bp.route('/api/orders', methods=['POST'])
