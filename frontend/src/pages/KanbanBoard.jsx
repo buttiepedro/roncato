@@ -109,7 +109,14 @@ export default function KanbanBoard() {
         </div>
       ))}
     </div>
-    <DetallePedido order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+    <DetallePedido
+      order={selectedOrder}
+      onClose={() => setSelectedOrder(null)}
+      onOrderUpdate={(updated) => {
+        setOrders(prev => prev.map(o => o.id === updated.id ? { ...o, ...updated } : o));
+        setSelectedOrder(updated);
+      }}
+    />
   </DragDropContext>
 );
 }

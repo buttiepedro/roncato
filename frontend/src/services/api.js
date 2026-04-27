@@ -41,6 +41,11 @@ export async function updateOrderStatus(id, status) {
   return data;
 }
 
+export async function updateOrderProducts(id, productos) {
+  const { data } = await api.put(`/api/orders/${id}`, { productos });
+  return data;
+}
+
 export async function fetchUsers() {
   const { data } = await api.get('/api/users');
   return data;

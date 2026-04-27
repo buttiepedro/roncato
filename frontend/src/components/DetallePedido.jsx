@@ -1,5 +1,6 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { formatArgentineDate } from '../utils/formatArgentineDate.jsx';
+import { updateOrderProducts } from '../services/api.js';
 
 const statusLabels = {
 	incoming: 'Entrante',
@@ -7,9 +8,26 @@ const statusLabels = {
 	delivered: 'Entregado',
 };
 
-export default function DetallePedido({ order, onClose }) {
+export default function DetallePedido({ order, onClose, onOrderUpdate }) {
 	const dialogRef = useRef(null);
 	const closeButtonRef = useRef(null);
+	const [productos, setProductos] = useState([]);
+
+	useEffect(() => {
+		setProductos((order?.productos || []).map(p => ({ ...p, listo: p.listo ?? false })));
+	}, [order?.id]);
+
+	const toggleProduct = async (index) => {
+		const updated = productos.map((p, i) => i === index ? { ...p, listo: !p.listo } : p);
+		setProductos(updated);
+		try {
+			const updatedOrder = await updateOrderProducts(order.id, updated);
+			onOrderUpdate?.(updatedOrder);
+		} catch (e) {
+			setProductos(productos);
+			console.error('Error al guardar estado del producto:', e);
+		}
+	};
 
 	useEffect(() => {
 		if (!order) {
@@ -148,17 +166,36 @@ export default function DetallePedido({ order, onClose }) {
 
 					<div className="rounded-2xl border border-slate-200 p-4">
 						<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Productos</p>
-						{order.productos && order.productos.length > 0 ? (
+						{productos.length > 0 ? (
 							<div className="mt-3 space-y-3">
-								{order.productos.map((producto, index) => (
-									<div key={`${producto.nombre}-${index}`} className="flex items-center justify-between rounded-xl bg-slate-50 px-4 py-3">
-										<div>
-											<p className="font-semibold text-slate-800">{producto.nombre || 'Producto sin nombre'}</p>
-											{producto.detalle && (
-												<p className="mt-1 text-xs text-slate-500">{producto.detalle}</p>
-											)}
+								{productos.map((producto, index) => (
+									<div
+										key={`${producto.nombre}-${index}`}
+										className={`flex items-center justify-between rounded-xl px-4 py-3 transition-colors ${producto.listo ? 'bg-emerald-50' : 'bg-slate-50'}`}
+									>
+										<div className="flex items-center gap-3 min-w-0">
+											<button
+												type="button"
+												onClick={() => toggleProduct(index)}
+												aria-label={producto.listo ? 'Marcar como pendiente' : 'Marcar como listo'}
+												className={`flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${producto.listo ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300 bg-white hover:border-emerald-400'}`}
+											>
+												{producto.listo && (
+													<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-white">
+														<path d="M5 13l4 4L19 7" />
+													</svg>
+												)}
+											</button>
+											<div className="min-w-0">
+												<p className={`font-semibold transition-colors ${producto.listo ? 'text-emerald-700 line-through decoration-emerald-400' : 'text-slate-800'}`}>
+													{producto.nombre || 'Producto sin nombre'}
+												</p>
+												{producto.detalle && (
+													<p className="mt-1 text-xs text-slate-500">{producto.detalle}</p>
+												)}
+											</div>
 										</div>
-										<span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-semibold text-blue-700">
+										<span className={`ml-3 flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${producto.listo ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
 											x{producto.cantidad || 1}
 										</span>
 									</div>

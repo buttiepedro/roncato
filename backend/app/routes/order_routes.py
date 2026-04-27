@@ -54,3 +54,17 @@ def update_status(id):
     
     notify_status_change(order) # Lógica n8n y sockets movida a service
     return jsonify(order.to_dict())
+
+@order_bp.route('/api/orders/<id>', methods=['PUT'])
+@token_required
+def update_product_order(id):
+    order = Order.query.get(id)
+    if not order: return jsonify({'error': 'Order not found'}), 404
+
+    data = request.json or {}
+    for field in ['productos']:
+        if field in data:
+            setattr(order, field, data[field])
+    
+    db.session.commit()
+    return jsonify(order.to_dict())
