@@ -6,9 +6,30 @@ from .extensions import db, socketio, cors, jwt
 
 def ensure_orders_columns():
     inspector = inspect(db.engine)
-    columns = {column['name'] for column in inspector.get_columns('orders')}
+    raw_columns = inspector.get_columns('orders')
+    columns = {column['name'] for column in raw_columns}
     if 'last_operator' not in columns:
         db.session.execute(text('ALTER TABLE orders ADD COLUMN last_operator VARCHAR(80)'))
+        db.session.commit()
+    if 'armo_pedido' not in columns:
+        db.session.execute(text('ALTER TABLE orders ADD COLUMN armo_pedido VARCHAR(80)'))
+        db.session.commit()
+    else:
+        armo_column = next((column for column in raw_columns if column['name'] == 'armo_pedido'), None)
+        type_name = str(armo_column['type']).upper() if armo_column else ''
+        if 'BOOLEAN' in type_name:
+            db.session.execute(text("""
+                ALTER TABLE orders
+                ALTER COLUMN armo_pedido TYPE VARCHAR(80)
+                USING CASE
+                    WHEN armo_pedido IS TRUE THEN 'Sin asignar'
+                    ELSE NULL
+                END
+            """))
+            db.session.execute(text('ALTER TABLE orders ALTER COLUMN armo_pedido DROP DEFAULT'))
+            db.session.commit()
+    if 'partial_delivery' not in columns:
+        db.session.execute(text('ALTER TABLE orders ADD COLUMN partial_delivery BOOLEAN DEFAULT FALSE'))
         db.session.commit()
 
 def create_app():
@@ -24,11 +45,13 @@ def create_app():
     # Registro de Blueprints (Rutas)
     from .routes.auth_routes import auth_bp
     from .routes.order_routes import order_bp
+    from .routes.product_routes import product_bp
     from .routes.webhook_routes import webhook_bp
     from .routes.user import user_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(order_bp)
+    app.register_blueprint(product_bp)
     app.register_blueprint(webhook_bp)
     app.register_blueprint(user_bp)
 

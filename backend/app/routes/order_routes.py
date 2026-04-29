@@ -1,10 +1,27 @@
 from flask import Blueprint, request, jsonify
-from ..models import Order, db
+from ..models import Order, Product, OrderProduct, db
 from ..utils.auth import admin_required, token_required
 from ..services.order_service import notify_status_change
 
 order_bp = Blueprint('orders', __name__)
 VALID_STATUSES = {'incoming', 'preparing', 'delivered'}
+
+
+def _employee_name(value):
+    if value is None:
+        return None
+    name = str(value).strip()
+    return name if name else None
+
+
+def _as_bool(value):
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return value.strip().lower() in {'1', 'true', 'yes', 'si'}
+    return bool(value)
 
 @order_bp.route('/api/orders', methods=['GET'])
 @token_required
@@ -27,9 +44,9 @@ def create_order():
         details=data.get('details', ''),
         cliente=data.get('cliente', 'Cliente sin nombre'),
         monto=data.get('monto', 0),
-        productos=data.get('productos', []),
         status=status,
-        color=data.get('color')
+        armo_pedido=_employee_name(data.get('armoPedido')),
+        partial_delivery=_as_bool(data.get('partialDelivery', False))
     )
     db.session.add(order)
     db.session.commit()
@@ -62,9 +79,105 @@ def update_product_order(id):
     if not order: return jsonify({'error': 'Order not found'}), 404
 
     data = request.json or {}
-    for field in ['productos']:
-        if field in data:
-            setattr(order, field, data[field])
+    if 'title' in data:
+        order.title = data['title']
+    if 'details' in data:
+        order.details = data['details']
+    if 'cliente' in data:
+        order.cliente = data['cliente']
+    if 'monto' in data:
+        order.monto = data['monto']
+    if 'armoPedido' in data:
+        order.armo_pedido = _employee_name(data.get('armoPedido'))
+    if 'partialDelivery' in data:
+        order.partial_delivery = _as_bool(data.get('partialDelivery'))
     
     db.session.commit()
     return jsonify(order.to_dict())
+
+
+@order_bp.route('/api/orders/<id>', methods=['DELETE'])
+@token_required
+@admin_required
+def delete_order(id):
+    order = Order.query.get(id)
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+
+    db.session.delete(order)
+    db.session.commit()
+    return jsonify({'ok': True}), 200
+
+
+@order_bp.route('/api/orders/<order_id>/products', methods=['GET'])
+@token_required
+def get_order_products(order_id):
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+
+    items = OrderProduct.query.filter_by(order_id=order_id).all()
+    return jsonify([item.to_dict() for item in items]), 200
+
+
+@order_bp.route('/api/orders/<order_id>/products', methods=['POST'])
+@token_required
+def add_product_to_order(order_id):
+    order = Order.query.get(order_id)
+    if not order:
+        return jsonify({'error': 'Order not found'}), 404
+
+    data = request.json or {}
+    product_id = data.get('productId')
+    if product_id is None:
+        return jsonify({'error': 'productId is required'}), 400
+
+    product = Product.query.get(product_id)
+    if not product:
+        return jsonify({'error': 'Product not found'}), 404
+
+    item = OrderProduct.query.filter_by(order_id=order_id, product_id=product_id).first()
+    if item:
+        return jsonify({'error': 'Product already exists in order'}), 409
+
+    item = OrderProduct(
+        order_id=order_id,
+        product_id=product_id,
+        quantity_ordered=data.get('quantityOrdered', 1),
+        quantity_delivered=data.get('quantityDelivered', 0),
+        ubication=data.get('ubication') or product.default_ubication
+    )
+    db.session.add(item)
+    db.session.commit()
+    return jsonify(item.to_dict()), 201
+
+
+@order_bp.route('/api/orders/<order_id>/products/<int:product_id>', methods=['PUT'])
+@token_required
+def update_order_product(order_id, product_id):
+    item = OrderProduct.query.filter_by(order_id=order_id, product_id=product_id).first()
+    if not item:
+        return jsonify({'error': 'Order product not found'}), 404
+
+    data = request.json or {}
+    if 'quantityOrdered' in data:
+        item.quantity_ordered = data['quantityOrdered']
+    if 'quantityDelivered' in data:
+        item.quantity_delivered = data['quantityDelivered']
+    if 'ubication' in data:
+        item.ubication = data['ubication']
+
+    db.session.commit()
+    return jsonify(item.to_dict()), 200
+
+
+@order_bp.route('/api/orders/<order_id>/products/<int:product_id>', methods=['DELETE'])
+@token_required
+def delete_order_product(order_id, product_id):
+    item = OrderProduct.query.filter_by(order_id=order_id, product_id=product_id).first()
+    if not item:
+        return jsonify({'error': 'Order product not found'}), 404
+
+    db.session.delete(item)
+    db.session.commit()
+    return jsonify({'ok': True}), 200

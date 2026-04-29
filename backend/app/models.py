@@ -19,10 +19,10 @@ class Order(db.Model):
     details = db.Column(db.Text)
     cliente = db.Column(db.String(100))
     monto = db.Column(db.Float, default=0.0)
-    productos = db.Column(db.JSON, default=list)
     status = db.Column(db.String(50), default='incoming')
     last_operator = db.Column(db.String(80), nullable=True)
-    color = db.Column(db.String(20))
+    armo_pedido = db.Column(db.String(80), nullable=True)
+    partial_delivery = db.Column(db.Boolean, default=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
@@ -32,8 +32,50 @@ class Order(db.Model):
 
     def to_dict(self):
         return {
-            "id": self.id, "title": self.title, "details": self.details,
-            "cliente": self.cliente, "monto": self.monto, "productos": self.productos or [],
-            "status": self.status, "lastOperator": self.last_operator, "color": self.color,
-            "createdAt": self._safe_iso(self.created_at), "updatedAt": self._safe_iso(self.updated_at)
+            "id": self.id, "title": self.title, 
+            "details": self.details,
+            "cliente": self.cliente, 
+            "monto": self.monto, 
+            "status": self.status, 
+            "lastOperator": self.last_operator,
+            "armoPedido": self.armo_pedido,
+            "partialDelivery": self.partial_delivery,
+            "createdAt": self._safe_iso(self.created_at), 
+            "updatedAt": self._safe_iso(self.updated_at)
+        }
+
+
+class Product(db.Model):
+    __tablename__ = 'products'
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    default_ubication = db.Column(db.String(100), nullable=True)
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "name": self.name,
+            "defaultUbication": self.default_ubication
+        }
+
+
+class OrderProduct(db.Model):
+    __tablename__ = 'order_products'
+    order_id = db.Column(db.String(36), db.ForeignKey('orders.id'), primary_key=True)
+    product_id = db.Column(db.Integer, db.ForeignKey('products.id'), primary_key=True)
+    quantity_ordered = db.Column(db.Integer, default=1)
+    quantity_delivered = db.Column(db.Integer, default=0)
+    ubication = db.Column(db.String(100), nullable=True)
+
+    order = db.relationship('Order', backref=db.backref('order_products', cascade='all, delete-orphan'))
+    product = db.relationship('Product', backref=db.backref('order_products', cascade='all, delete-orphan'))
+
+    def to_dict(self):
+        return {
+            "orderId": self.order_id,
+            "productId": self.product_id,
+            "quantityOrdered": self.quantity_ordered,
+            "quantityDelivered": self.quantity_delivered,
+            "ubication": self.ubication,
+            "product": self.product.to_dict() if self.product else None
         }
