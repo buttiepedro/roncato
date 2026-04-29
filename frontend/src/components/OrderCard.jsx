@@ -3,6 +3,8 @@ import { Draggable } from '@hello-pangea/dnd';
 import { formatArgentineDate } from '../utils/formatArgentineDate.jsx';
 
 export default function OrderCard({ order, index, onViewDetail }) {
+  const isPartialDelivery = Boolean(order.partialDelivery);
+
   return (
     <Draggable draggableId={order.id.toString()} index={index}>
       {(provided, snapshot) => (
@@ -10,17 +12,21 @@ export default function OrderCard({ order, index, onViewDetail }) {
           ref={provided.innerRef}
           {...provided.draggableProps}
           style={provided.draggableProps.style}
-          className={`bg-white rounded-lg mb-3 shadow-sm border border-slate-200 overflow-hidden transition-all ${
+          className={`rounded-lg mb-3 shadow-sm border overflow-hidden transition-all ${
+            isPartialDelivery ? 'bg-amber-50 border-amber-300' : 'bg-white border-slate-200'
+          } ${
             snapshot.isDragging ? 'opacity-80 scale-105' : 'opacity-100'
           }`}
         >
           {/* Cabecera: Pequeña en tablet (py-1.5), normal en desktop (lg:py-3) */}
           <div
             {...provided.dragHandleProps}
-            className="cursor-grab active:cursor-grabbing px-2.5 py-2 md:px-3 md:py-2.5 bg-blue-50 border-b border-blue-100 flex flex-col items-start gap-1 lg:flex-row lg:justify-between lg:items-center lg:gap-2"
+            className={`cursor-grab active:cursor-grabbing px-2.5 py-2 md:px-3 md:py-2.5 border-b flex flex-col items-start gap-1 lg:flex-row lg:justify-between lg:items-center lg:gap-2 ${
+              isPartialDelivery ? 'bg-amber-100 border-amber-200' : 'bg-blue-50 border-blue-100'
+            }`}
             aria-label={`Mover pedido ${order.title}`}
           >
-            <strong className="text-blue-900 font-bold text-xs md:text-sm lg:text-sm leading-tight truncate">
+            <strong className={`font-bold text-xs md:text-sm lg:text-sm leading-tight truncate ${isPartialDelivery ? 'text-amber-900' : 'text-blue-900'}`}>
               {order.title}
             </strong>
             <div className="flex items-center gap-2 shrink-0">
@@ -58,19 +64,17 @@ export default function OrderCard({ order, index, onViewDetail }) {
               </p>
             )}
 
-            {/* Lista de productos: 
-              Mostramos solo la cantidad de productos
-            */}
-            {order.productos && order.productos.length > 0 && (
-              <p className="text-xs md:text-sm text-slate-400">
-                Cant. de Productos:
-                <span className="text-slate-700">{order.productos.length}</span> 
-              </p>
-            )}           
+            <p className="text-xs md:text-sm text-slate-400">
+              Armo: <span className="font-semibold text-slate-700">{order.armoPedido || 'Sin asignar'}</span>
+            </p>
             
             <button
               type="button"
-              className="mt-2.5 w-full bg-blue-600 text-white text-xs md:text-sm py-2 rounded-md hover:bg-blue-700 transition-colors font-semibold shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              className={`mt-2.5 w-full text-white text-xs md:text-sm py-2 rounded-md transition-colors font-semibold shadow-sm focus-visible:outline-2 focus-visible:outline-offset-2 ${
+                isPartialDelivery
+                  ? 'bg-amber-600 hover:bg-amber-700 focus-visible:outline-amber-600'
+                  : 'bg-blue-600 hover:bg-blue-700 focus-visible:outline-blue-600'
+              }`}
               onClick={() => onViewDetail(order)}
               aria-label={`Ver detalle de ${order.title}`}
             >

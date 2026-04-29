@@ -1,31 +1,155 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { formatArgentineDate } from '../utils/formatArgentineDate.jsx';
-import { updateOrderProducts } from '../services/api.js';
-
-const statusLabels = {
-	incoming: 'Entrante',
-	preparing: 'En preparacion',
-	delivered: 'Entregado',
-};
+import { fetchOrderProducts, updateOrder, updateOrderProduct } from '../services/api.js';
+import DetalleTextoSection from './DetalleTextoSection.jsx';
+import ProductosSection from './ProductosSection.jsx';
+import ResumenInfoPedidoSection from './ResumenInfoPedidoSection.jsx';
 
 export default function DetallePedido({ order, onClose, onOrderUpdate }) {
 	const dialogRef = useRef(null);
 	const closeButtonRef = useRef(null);
 	const [productos, setProductos] = useState([]);
+	const [loadingProducts, setLoadingProducts] = useState(false);
+	const [partialDelivery, setPartialDelivery] = useState(false);
+	const [savingPartialDelivery, setSavingPartialDelivery] = useState(false);
 
 	useEffect(() => {
-		setProductos((order?.productos || []).map(p => ({ ...p, listo: p.listo ?? false })));
+		setPartialDelivery(Boolean(order?.partialDelivery));
+	}, [order?.id, order?.partialDelivery]);
+
+	useEffect(() => {
+		if (!order?.id) {
+			setProductos([]);
+			return;
+		}
+
+		(async () => {
+			setLoadingProducts(true);
+			try {
+				const items = await fetchOrderProducts(order.id);
+				setProductos(Array.isArray(items) ? items : []);
+			} catch (e) {
+				console.error('Error al cargar productos del pedido:', e);
+				setProductos([]);
+			} finally {
+				setLoadingProducts(false);
+			}
+		})();
 	}, [order?.id]);
 
-	const toggleProduct = async (index) => {
-		const updated = productos.map((p, i) => i === index ? { ...p, listo: !p.listo } : p);
+	const updateProductQuantity = async (productId, field, value) => {
+		if (!order?.id) return;
+		if (field === 'quantityOrdered') return;
+
+		const numericValue = Number(value);
+		if (Number.isNaN(numericValue) || numericValue < 0) return;
+
+		const previous = [...productos];
+		const updated = productos.map((p) => {
+			if (p.productId !== productId) return p;
+			const maxDelivered = Math.max(0, Number(p.quantityOrdered) || 0);
+			const clampedDelivered = Math.min(Math.max(0, numericValue), maxDelivered);
+			return { ...p, [field]: clampedDelivered };
+		});
 		setProductos(updated);
+
+		const currentItem = updated.find((p) => p.productId === productId);
+		if (!currentItem) return;
+
 		try {
-			const updatedOrder = await updateOrderProducts(order.id, updated);
+			await updateOrderProduct(order.id, productId, {
+				quantityOrdered: currentItem.quantityOrdered,
+				quantityDelivered: currentItem.quantityDelivered,
+				ubication: currentItem.ubication,
+			});
+			onOrderUpdate?.({ ...order });
+		} catch (e) {
+			setProductos(previous);
+			console.error('Error al guardar cantidades del producto:', e);
+		}
+	};
+
+	const adjustDeliveredQuantity = (producto, delta) => {
+		const currentDelivered = Number(producto.quantityDelivered) || 0;
+		const maxDelivered = Math.max(0, Number(producto.quantityOrdered) || 0);
+		const nextDelivered = Math.min(Math.max(0, currentDelivered + delta), maxDelivered);
+		if (nextDelivered === currentDelivered) return;
+		updateProductQuantity(producto.productId, 'quantityDelivered', nextDelivered);
+	};
+
+	const updateProductUbication = async (producto, nextUbication) => {
+		if (!order?.id) return;
+
+		const previous = [...productos];
+		const updated = productos.map((p) => p.productId === producto.productId ? {
+			...p,
+			ubication: nextUbication,
+		} : p);
+		setProductos(updated);
+
+		const currentItem = updated.find((p) => p.productId === producto.productId);
+		if (!currentItem) return;
+
+		try {
+			await updateOrderProduct(order.id, producto.productId, {
+				quantityOrdered: currentItem.quantityOrdered,
+				quantityDelivered: currentItem.quantityDelivered,
+				ubication: currentItem.ubication,
+			});
+			onOrderUpdate?.({ ...order });
+		} catch (e) {
+			setProductos(previous);
+			console.error('Error al actualizar ubicacion del producto:', e);
+		}
+	};
+
+	const persistPartialDelivery = async (nextValue) => {
+		if (!order?.id) return;
+
+		const previous = partialDelivery;
+		setPartialDelivery(nextValue);
+		setSavingPartialDelivery(true);
+
+		try {
+			const updatedOrder = await updateOrder(order.id, { partialDelivery: nextValue });
+			setPartialDelivery(Boolean(updatedOrder.partialDelivery));
 			onOrderUpdate?.(updatedOrder);
 		} catch (e) {
-			setProductos(productos);
-			console.error('Error al guardar estado del producto:', e);
+			setPartialDelivery(previous);
+			console.error('Error al actualizar entrega parcial:', e);
+		} finally {
+			setSavingPartialDelivery(false);
+		}
+	};
+
+	const toggleProductAdded = async (producto) => {
+		if (!order?.id) return;
+
+		const isAdded = (producto.quantityDelivered || 0) >= (producto.quantityOrdered || 0) && (producto.quantityOrdered || 0) > 0;
+		const nextOrdered = (producto.quantityOrdered || 0) > 0 ? producto.quantityOrdered : 1;
+		const nextDelivered = isAdded ? 0 : nextOrdered;
+
+		const previous = [...productos];
+		const updated = productos.map((p) => p.productId === producto.productId ? {
+			...p,
+			quantityOrdered: nextOrdered,
+			quantityDelivered: nextDelivered,
+		} : p);
+		setProductos(updated);
+
+		const currentItem = updated.find((p) => p.productId === producto.productId);
+		if (!currentItem) return;
+
+		try {
+			await updateOrderProduct(order.id, producto.productId, {
+				quantityOrdered: currentItem.quantityOrdered,
+				quantityDelivered: currentItem.quantityDelivered,
+				ubication: currentItem.ubication,
+			});
+			onOrderUpdate?.({ ...order });
+		} catch (e) {
+			setProductos(previous);
+			console.error('Error al marcar producto como agregado:', e);
 		}
 	};
 
@@ -72,6 +196,17 @@ export default function DetallePedido({ order, onClose, onOrderUpdate }) {
 			window.removeEventListener('keydown', handleEscape);
 		};
 	}, [onClose, order]);
+
+	const totalOrdered = productos.reduce((acc, item) => acc + (item.quantityOrdered || 0), 0);
+	const totalDelivered = productos.reduce((acc, item) => acc + (item.quantityDelivered || 0), 0);
+	const hasMissingProducts = productos.some((item) => (item.quantityDelivered || 0) < (item.quantityOrdered || 0));
+
+	useEffect(() => {
+		if (!order?.id || loadingProducts || productos.length === 0) return;
+		if (partialDelivery && !hasMissingProducts && !savingPartialDelivery) {
+			persistPartialDelivery(false);
+		}
+	}, [order?.id, loadingProducts, productos, partialDelivery, hasMissingProducts, savingPartialDelivery]);
 
 	if (!order) {
 		return null;
@@ -123,88 +258,26 @@ export default function DetallePedido({ order, onClose, onOrderUpdate }) {
 				</div>
 
 				<div className="max-h-[calc(90vh-96px)] overflow-y-auto space-y-6 px-4 py-5 text-sm text-slate-600 md:px-6 md:py-6">
-					<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-						<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-							<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Estado</p>
-							<p className="mt-2 text-base font-semibold text-slate-800">
-								{statusLabels[order.status] || order.status}
-							</p>
-						</div>
-						<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-							<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Cliente</p>
-							<p className="mt-2 text-base font-semibold text-slate-800">
-								{order.cliente || 'Sin cliente asignado'}
-							</p>
-						</div>
-						<div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-							<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Monto</p>
-							<p className="mt-2 text-base font-semibold text-emerald-600">
-								${order.monto ?? 0}
-							</p>
-						</div>
-					</div>
+					<ResumenInfoPedidoSection
+						order={order}
+						totalOrdered={totalOrdered}
+						totalDelivered={totalDelivered}
+						partialDelivery={partialDelivery}
+						savingPartialDelivery={savingPartialDelivery}
+						hasMissingProducts={hasMissingProducts}
+						onTogglePartialDelivery={persistPartialDelivery}
+					/>
 
-					<div className="grid gap-4 md:grid-cols-2">
-						<div className="rounded-2xl border border-slate-200 p-4">
-							<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Ultimo operario</p>
-							<p className="mt-2 text-base font-semibold text-slate-800">
-								{order.lastOperator || 'Todavia sin movimientos manuales'}
-							</p>
-						</div>
-						<div className="rounded-2xl border border-slate-200 p-4">
-							<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">ID</p>
-							<p className="mt-2 break-all font-mono text-xs text-slate-700">{order.id}</p>
-						</div>
-					</div>
+					<DetalleTextoSection detailText={order.details} />
 
-					<div className="rounded-2xl border border-slate-200 p-4">
-						<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Detalle</p>
-						<p className="mt-3 whitespace-pre-wrap leading-6 text-slate-700">
-							{order.details || 'Este pedido no tiene detalle adicional.'}
-						</p>
-					</div>
-
-					<div className="rounded-2xl border border-slate-200 p-4">
-						<p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Productos</p>
-						{productos.length > 0 ? (
-							<div className="mt-3 space-y-3">
-								{productos.map((producto, index) => (
-									<div
-										key={`${producto.nombre}-${index}`}
-										className={`flex items-center justify-between rounded-xl px-4 py-3 transition-colors ${producto.listo ? 'bg-emerald-50' : 'bg-slate-50'}`}
-									>
-										<div className="flex items-center gap-3 min-w-0">
-											<button
-												type="button"
-												onClick={() => toggleProduct(index)}
-												aria-label={producto.listo ? 'Marcar como pendiente' : 'Marcar como listo'}
-												className={`flex-shrink-0 h-5 w-5 rounded-full border-2 flex items-center justify-center transition-colors ${producto.listo ? 'border-emerald-500 bg-emerald-500' : 'border-slate-300 bg-white hover:border-emerald-400'}`}
-											>
-												{producto.listo && (
-													<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3} strokeLinecap="round" strokeLinejoin="round" className="h-3 w-3 text-white">
-														<path d="M5 13l4 4L19 7" />
-													</svg>
-												)}
-											</button>
-											<div className="min-w-0">
-												<p className={`font-semibold transition-colors ${producto.listo ? 'text-emerald-700 line-through decoration-emerald-400' : 'text-slate-800'}`}>
-													{producto.nombre || 'Producto sin nombre'}
-												</p>
-												{producto.detalle && (
-													<p className="mt-1 text-xs text-slate-500">{producto.detalle}</p>
-												)}
-											</div>
-										</div>
-										<span className={`ml-3 flex-shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${producto.listo ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700'}`}>
-											x{producto.cantidad || 1}
-										</span>
-									</div>
-								))}
-							</div>
-						) : (
-							<p className="mt-3 text-slate-500">No hay productos cargados para este pedido.</p>
-						)}
-					</div>
+					<ProductosSection
+						loadingProducts={loadingProducts}
+						productos={productos}
+						partialDelivery={partialDelivery}
+						onToggleAdded={toggleProductAdded}
+						onAdjustDelivered={adjustDeliveredQuantity}
+						onUpdateUbication={updateProductUbication}
+					/>
 				</div>
 			</div>
 		</div>

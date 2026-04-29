@@ -46,6 +46,21 @@ export async function updateOrderProducts(id, productos) {
   return data;
 }
 
+export async function updateOrder(id, payload) {
+  const { data } = await api.put(`/api/orders/${id}`, payload);
+  return data;
+}
+
+export async function fetchOrderProducts(orderId) {
+  const { data } = await api.get(`/api/orders/${orderId}/products`);
+  return data;
+}
+
+export async function updateOrderProduct(orderId, productId, payload) {
+  const { data } = await api.put(`/api/orders/${orderId}/products/${productId}`, payload);
+  return data;
+}
+
 export async function fetchUsers() {
   const { data } = await api.get('/api/users');
   return data;
