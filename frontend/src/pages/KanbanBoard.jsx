@@ -64,7 +64,7 @@ export default function KanbanBoard() {
     {/* h-[calc(100vh-2rem)]: Ajusta la altura para que ocupe casi toda la pantalla.
       overflow-hidden: Evita que toda la página scrollee, queremos que scrolleen las columnas.
     */}
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-8 p-3 md:p-4 bg-slate-50 h-full min-h-0 overflow-y-auto">
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-8 p-3 md:p-4 bg-slate-50 h-full min-h-0 overflow-y-auto motion-safe:animate-[pageEnter_560ms_cubic-bezier(0.22,1,0.36,1)]">
       {columns.map(column => (
         <div 
           key={column.id} 

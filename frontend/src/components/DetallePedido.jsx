@@ -214,7 +214,7 @@ export default function DetallePedido({ order, onClose, onOrderUpdate }) {
 
 	return (
 		<div
-			className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
+			className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm transition-opacity duration-300"
 			onClick={onClose}
 			aria-hidden="true"
 		>
@@ -223,7 +223,7 @@ export default function DetallePedido({ order, onClose, onOrderUpdate }) {
 				role="dialog"
 				aria-modal="true"
 				aria-labelledby="detalle-pedido-titulo"
-				className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl"
+				className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-3xl bg-white shadow-2xl transform-gpu transition-all duration-300"
 				onClick={(event) => event.stopPropagation()}
 			>
 				<div className="flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-50 px-4 py-4 md:px-6 md:py-5">

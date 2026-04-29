@@ -6,7 +6,7 @@ const ProtectedRoute = ({ requiredRole }) => {
   const { user, loading } = useContext(AuthContext);
 
   // estoy previene que el componente se renderice antes de tiempo y te expulse al login
-  if (loading) return <div>Loading...</div>;
+  if (loading) return null;
 
   if (!user) return <Navigate to="/login" />;
 

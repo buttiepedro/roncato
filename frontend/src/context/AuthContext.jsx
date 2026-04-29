@@ -35,6 +35,7 @@ export const AuthProvider = ({ children }) => {
           const notExpired = !decoded.exp || decoded.exp * 1000 > Date.now();
           if (notExpired) {
             saveUserFromToken(token);
+            sessionStorage.setItem("showAppLoader", "1");
           } else {
             localStorage.removeItem("token");
             sessionStorage.removeItem("token");
@@ -53,12 +54,14 @@ export const AuthProvider = ({ children }) => {
         localStorage.setItem("token", token);
       else
         sessionStorage.setItem("token", token);
+      sessionStorage.setItem("showAppLoader", "1");
       saveUserFromToken(token);
     };
 
     const logout = () => {
         localStorage.removeItem("token");
         sessionStorage.removeItem("token");
+      sessionStorage.removeItem("showAppLoader");
         setUser(null);
     };
 

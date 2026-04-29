@@ -17,3 +17,14 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: #94a3b8; /* slate-400 */
 }
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

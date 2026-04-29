@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from ..models import Product, db
+from ..models import Product, OrderProduct, db
 from ..utils.auth import token_required, admin_required
 
 product_bp = Blueprint('products', __name__)
@@ -41,7 +41,6 @@ def create_product():
 
 @product_bp.route('/api/products/<int:product_id>', methods=['PUT'])
 @token_required
-@admin_required
 def update_product(product_id):
     product = Product.query.get(product_id)
     if not product:
@@ -55,7 +54,16 @@ def update_product(product_id):
         product.name = name
 
     if 'defaultUbication' in data:
-        product.default_ubication = data.get('defaultUbication')
+        old_default = product.default_ubication
+        new_default = data.get('defaultUbication')
+        product.default_ubication = new_default
+
+        # Keep order-product ubication in sync when it still follows product default.
+        # If an operator manually changed an order-product ubication, preserve it.
+        sync_candidates = OrderProduct.query.filter_by(product_id=product_id).all()
+        for item in sync_candidates:
+            if item.ubication is None or item.ubication == old_default:
+                item.ubication = new_default
 
     db.session.commit()
     return jsonify(product.to_dict()), 200

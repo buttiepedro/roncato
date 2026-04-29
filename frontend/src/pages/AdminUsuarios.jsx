@@ -7,6 +7,8 @@ export default function AdminUsuarios() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const USERS_PER_PAGE = 5;
 
   const getUsers = async () => {
     setLoading(true);
@@ -39,7 +41,11 @@ export default function AdminUsuarios() {
   const handleCreateUser = async (user) => {
     try {
       const newUser = await createUser(user);
-      setUsers((prev) => [...prev, newUser]);
+      setUsers((prev) => {
+        const next = [...prev, newUser];
+        setCurrentPage(Math.ceil(next.length / USERS_PER_PAGE));
+        return next;
+      });
     } catch (err) {
       console.error("Error al crear usuario:", err);
     }
@@ -70,7 +76,7 @@ export default function AdminUsuarios() {
   };
 
   return (
-    <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans">
+    <div className="p-4 md:p-8 bg-slate-50 min-h-screen font-sans motion-safe:animate-[pageEnter_560ms_cubic-bezier(0.22,1,0.36,1)]">
       {/* Header del Dashboard */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
         <div>
@@ -113,8 +119,8 @@ export default function AdminUsuarios() {
                   </td>
                 </tr>
               ) : (
-              users.map((user) => (
-                <tr key={user.id} className="hover:bg-slate-50/50 transition-colors">
+              users.slice((currentPage - 1) * USERS_PER_PAGE, currentPage * USERS_PER_PAGE).map((user) => (
+                <tr key={user.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
@@ -159,10 +165,48 @@ export default function AdminUsuarios() {
         </div>
       </div>
 
+      {/* Paginacion */}
+      {users.length > USERS_PER_PAGE && (
+        <div className="flex items-center justify-between mt-4 px-1">
+          <span className="text-sm text-slate-500">
+            Página {currentPage} de {Math.ceil(users.length / USERS_PER_PAGE)}
+          </span>
+          <div className="flex gap-2">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-3 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              ← Anterior
+            </button>
+            {Array.from({ length: Math.ceil(users.length / USERS_PER_PAGE) }, (_, i) => i + 1).map((page) => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className={`px-3 py-1.5 rounded-lg border text-sm font-medium transition-colors ${
+                  page === currentPage
+                    ? 'bg-blue-600 text-white border-blue-600'
+                    : 'border-slate-300 text-slate-600 hover:bg-slate-100'
+                }`}
+              >
+                {page}
+              </button>
+            ))}
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, Math.ceil(users.length / USERS_PER_PAGE)))}
+              disabled={currentPage === Math.ceil(users.length / USERS_PER_PAGE)}
+              className="px-3 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              Siguiente →
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Modal Simple (Esqueleto) */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 transition-opacity duration-300">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 transform-gpu transition-all duration-300">
             <h2 className="text-xl font-bold text-slate-800 mb-4">
               {editingUser ? 'Editar Usuario' : 'Crear Nuevo Usuario'}
             </h2>
