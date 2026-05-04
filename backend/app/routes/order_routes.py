@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
-from ..models import Order, Product, OrderProduct, db
+from ..models import Order, Product, OrderProduct, EntregaParcial, User, db
 from ..utils.auth import admin_required, token_required
 from ..services.order_service import notify_status_change
+from datetime import datetime
 
 order_bp = Blueprint('orders', __name__)
 VALID_STATUSES = {'incoming', 'preparing', 'delivered'}
@@ -23,6 +24,17 @@ def _as_bool(value):
         return value.strip().lower() in {'1', 'true', 'yes', 'si'}
     return bool(value)
 
+
+def _validated_armador(value):
+    armador = _employee_name(value)
+    if armador is None:
+        return None, None
+
+    exists = User.query.filter_by(username=armador).first()
+    if not exists:
+        return None, f'Armador "{armador}" no existe'
+    return armador, None
+
 @order_bp.route('/api/orders', methods=['GET'])
 @token_required
 def get_orders():
@@ -38,6 +50,10 @@ def create_order():
     if status not in VALID_STATUSES:
         return jsonify({'error': 'Invalid status'}), 400
 
+    armo_pedido, armador_error = _validated_armador(data.get('armoPedido'))
+    if armador_error:
+        return jsonify({'error': armador_error}), 400
+
     order = Order(
         id=data.get('id'),
         title=data.get('title', 'Pedido'),
@@ -45,7 +61,7 @@ def create_order():
         cliente=data.get('cliente', 'Cliente sin nombre'),
         monto=data.get('monto', 0),
         status=status,
-        armo_pedido=_employee_name(data.get('armoPedido')),
+        armo_pedido=armo_pedido,
         partial_delivery=_as_bool(data.get('partialDelivery', False))
     )
     db.session.add(order)
@@ -67,6 +83,16 @@ def update_status(id):
     order.status = new_status
     claims = getattr(request, 'user', {})
     order.last_operator = claims.get('username')
+
+    # Si se mueve a 'delivered' y hay productos faltantes, crear EntregaParcial
+    if new_status == 'delivered':
+        products = OrderProduct.query.filter_by(order_id=order.id).all()
+        has_missing = any(p.quantity_delivered < p.quantity_ordered for p in products)
+        if has_missing:
+            order.partial_delivery = True
+            entrega = EntregaParcial(order_id=order.id)
+            db.session.add(entrega)
+
     db.session.commit()
     
     notify_status_change(order) # Lógica n8n y sockets movida a service
@@ -88,7 +114,10 @@ def update_product_order(id):
     if 'monto' in data:
         order.monto = data['monto']
     if 'armoPedido' in data:
-        order.armo_pedido = _employee_name(data.get('armoPedido'))
+        armo_pedido, armador_error = _validated_armador(data.get('armoPedido'))
+        if armador_error:
+            return jsonify({'error': armador_error}), 400
+        order.armo_pedido = armo_pedido
     if 'partialDelivery' in data:
         order.partial_delivery = _as_bool(data.get('partialDelivery'))
     

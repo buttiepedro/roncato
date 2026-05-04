@@ -48,12 +48,14 @@ def create_app():
     from .routes.product_routes import product_bp
     from .routes.webhook_routes import webhook_bp
     from .routes.user import user_bp
+    from .routes.partial_delivery_routes import partial_delivery_bp
     
     app.register_blueprint(auth_bp)
     app.register_blueprint(order_bp)
     app.register_blueprint(product_bp)
     app.register_blueprint(webhook_bp)
     app.register_blueprint(user_bp)
+    app.register_blueprint(partial_delivery_bp)
 
     with app.app_context():
         db.create_all()

@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from ..models import Order, db
+from ..models import Order, User, db
 from ..extensions import socketio
 
 webhook_bp = Blueprint('webhooks', __name__)
@@ -21,9 +21,24 @@ def _as_bool(value):
         return value.strip().lower() in {'1', 'true', 'yes', 'si'}
     return bool(value)
 
+
+def _validated_armador(value):
+    armador = _employee_name(value)
+    if armador is None:
+        return None, None
+
+    exists = User.query.filter_by(username=armador).first()
+    if not exists:
+        return None, f'Armador "{armador}" no existe'
+    return armador, None
+
 @webhook_bp.route('/webhook/order', methods=['POST'])
 def webhook_new_order():
     data = request.json
+    armo_pedido, armador_error = _validated_armador(data.get('armoPedido'))
+    if armador_error:
+        return jsonify({'error': armador_error}), 400
+
     new_order = Order(
         id=data.get('id'),
         title=data.get('title', 'Pedido'),
@@ -31,7 +46,7 @@ def webhook_new_order():
         cliente=data.get('cliente', 'Cliente sin nombre'),
         monto=data.get('monto', 0),
         status='incoming',
-        armo_pedido=_employee_name(data.get('armoPedido')),
+        armo_pedido=armo_pedido,
         partial_delivery=_as_bool(data.get('partialDelivery', False))
     )
     db.session.add(new_order)
@@ -49,7 +64,10 @@ def webhook_update_order():
     for key in ['title', 'details', 'cliente', 'monto']:
         if key in data: setattr(order, key, data[key])
     if 'armoPedido' in data:
-        order.armo_pedido = _employee_name(data.get('armoPedido'))
+        armo_pedido, armador_error = _validated_armador(data.get('armoPedido'))
+        if armador_error:
+            return jsonify({'error': armador_error}), 400
+        order.armo_pedido = armo_pedido
     if 'partialDelivery' in data:
         order.partial_delivery = _as_bool(data.get('partialDelivery'))
     

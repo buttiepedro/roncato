@@ -79,3 +79,29 @@ class OrderProduct(db.Model):
             "ubication": self.ubication,
             "product": self.product.to_dict() if self.product else None
         }
+
+
+class EntregaParcial(db.Model):
+    __tablename__ = 'entregas_parciales'
+    id = db.Column(db.Integer, primary_key=True)
+    order_id = db.Column(db.String(36), db.ForeignKey('orders.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    completed = db.Column(db.Boolean, default=False)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    order = db.relationship('Order', backref=db.backref('entregas_parciales', cascade='all, delete-orphan'))
+
+    def to_dict(self):
+        missing_products = [
+            op.to_dict() for op in self.order.order_products
+            if op.quantity_delivered < op.quantity_ordered
+        ] if self.order else []
+        return {
+            "id": self.id,
+            "orderId": self.order_id,
+            "order": self.order.to_dict() if self.order else None,
+            "missingProducts": missing_products,
+            "createdAt": self.created_at.isoformat() if self.created_at else None,
+            "completed": self.completed,
+            "completedAt": self.completed_at.isoformat() if self.completed_at else None,
+        }
