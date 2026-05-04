@@ -1,8 +1,18 @@
 from flask import Blueprint, request, jsonify
 from ..models import Product, OrderProduct, db
 from ..utils.auth import token_required, admin_required
+from unidecode import unidecode
+import re
 
 product_bp = Blueprint('products', __name__)
+
+
+def normalize_string(text):
+    """Normalize string: lowercase, remove accents, remove special characters"""
+    text = text.lower()
+    text = unidecode(text)
+    text = re.sub(r'[^a-z0-9]', '', text)
+    return text
 
 
 @product_bp.route('/api/products', methods=['GET'])
@@ -19,12 +29,16 @@ def search_products():
     if not query:
         return jsonify([]), 200
     
-    # Search for products with names containing the query (case-insensitive)
-    products = Product.query.filter(
-        Product.name.ilike(f'%{query}%')
-    ).order_by(Product.name.asc()).all()
+    normalized_query = normalize_string(query)
     
-    return jsonify([product.to_dict() for product in products]), 200
+    # Get all products and filter by normalized name
+    products = Product.query.order_by(Product.name.asc()).all()
+    matches = [
+        product for product in products
+        if normalized_query in normalize_string(product.name)
+    ]
+    
+    return jsonify([product.to_dict() for product in matches]), 200
 
 
 @product_bp.route('/api/products/<int:product_id>', methods=['GET'])
