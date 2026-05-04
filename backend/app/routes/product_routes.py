@@ -12,6 +12,21 @@ def get_products():
     return jsonify([product.to_dict() for product in products]), 200
 
 
+@product_bp.route('/api/products/search', methods=['GET'])
+@token_required
+def search_products():
+    query = request.args.get('q', '').strip()
+    if not query:
+        return jsonify([]), 200
+    
+    # Search for products with names containing the query (case-insensitive)
+    products = Product.query.filter(
+        Product.name.ilike(f'%{query}%')
+    ).order_by(Product.name.asc()).all()
+    
+    return jsonify([product.to_dict() for product in products]), 200
+
+
 @product_bp.route('/api/products/<int:product_id>', methods=['GET'])
 @token_required
 def get_product(product_id):
