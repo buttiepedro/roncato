@@ -30,10 +30,23 @@ def _validated_armador(value):
     if armador is None:
         return None, None
 
+    # Accept username directly.
     exists = User.query.filter_by(username=armador).first()
-    if not exists:
-        return None, f'Armador "{armador}" no existe'
-    return armador, None
+    if exists:
+        return exists.username, None
+
+    # Accept numeric id and resolve to username for storage consistency.
+    try:
+        armador_id = int(armador)
+    except (TypeError, ValueError):
+        armador_id = None
+
+    if armador_id is not None:
+        exists = User.query.get(armador_id)
+        if exists:
+            return exists.username, None
+
+    return None, f'Armador "{armador}" no existe'
 
 @order_bp.route('/api/orders', methods=['GET'])
 @token_required
