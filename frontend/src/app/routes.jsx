@@ -6,6 +6,7 @@ import KanbanBoard from "../pages/KanbanBoard.jsx"
 import MainLayout from "../layouts/MainLayout.jsx"
 import AdminUsuarios from "../pages/AdminUsuarios.jsx"
 import ProductosOperador from "../pages/ProductosOperador.jsx"
+import EntregasParciales from "../pages/EntregasParciales.jsx"
 import { useAuth } from "../context/AuthContext.jsx"
 import FullScreenLoader from "../components/FullScreenLoader.jsx"
 
@@ -34,6 +35,7 @@ export default function AppRoutes() {
           <Route element={<ProtectedRoute />}>
             <Route path="/kanban" element={<KanbanBoard />} />
             <Route path="/productos" element={<ProductosOperador />} />
+            <Route path="/entregas-parciales" element={<EntregasParciales />} />
           </Route>
           <Route element={<ProtectedRoute requiredRole={"admin"} />}>
             <Route path="/admin" element={<AdminUsuarios />} />

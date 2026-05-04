@@ -38,10 +38,14 @@ export default function ResumenInfoPedidoSection({
 				/>
 			</div>
 
-			<div className="grid gap-4 md:grid-cols-2">
+			<div className="grid gap-4 md:grid-cols-3">
 				<InfoDatoCard
 					label="Ultimo operario"
-					value={order.lastOperator || 'Todavia sin movimientos manuales'}
+					value={order.lastOperator || '-'}
+				/>
+				<InfoDatoCard
+					label="Armador"
+					value={order.armoPedido || 'Sin armador asignado'}
 				/>
 				<InfoDatoCard
 					label="ID"

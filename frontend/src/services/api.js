@@ -96,4 +96,14 @@ export async function deleteUser(id) {
   return data;
 }
 
+export async function fetchEntregasParciales() {
+  const { data } = await api.get('/api/entregas-parciales');
+  return data;
+}
+
+export async function completarEntregaParcial(id) {
+  const { data } = await api.patch(`/api/entregas-parciales/${id}/complete`);
+  return data;
+}
+
 export const API_BASE = API_URL;

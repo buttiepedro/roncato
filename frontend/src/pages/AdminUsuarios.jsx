@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import FormUser from '../components/FormUser.jsx';
+import ActionDialog from '../components/ActionDialog.jsx';
 import { fetchUsers, createUser, updateUser, deleteUser } from '../services/api.js';
 
 export default function AdminUsuarios() {
@@ -8,7 +9,11 @@ export default function AdminUsuarios() {
   const [editingUser, setEditingUser] = useState(null);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [userToDelete, setUserToDelete] = useState(null);
+  const [deletingUser, setDeletingUser] = useState(false);
   const USERS_PER_PAGE = 5;
+  const totalPages = Math.max(1, Math.ceil(users.length / USERS_PER_PAGE));
+  const paginatedUsers = users.slice((currentPage - 1) * USERS_PER_PAGE, currentPage * USERS_PER_PAGE);
 
   const getUsers = async () => {
     setLoading(true);
@@ -26,15 +31,33 @@ export default function AdminUsuarios() {
     getUsers();
   }, []);
 
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages));
+  }, [totalPages]);
+
   // Funciones de CRUD (Lógica básica)
-  const handleDelete = async (id) => {
-    if (window.confirm('¿Estás seguro de eliminar este usuario?')) {
-      try {
-        await deleteUser(id);
-        setUsers((prev) => prev.filter((u) => u.id !== id));
-      } catch (err) {
-        console.error("Error al eliminar usuario:", err);
-      }
+  const askDeleteUser = (user) => {
+    setUserToDelete(user);
+  };
+
+  const handleDeleteConfirm = async () => {
+    if (!userToDelete) return;
+
+    setDeletingUser(true);
+    try {
+      await deleteUser(userToDelete.id);
+      setUsers((prev) => {
+        const nextUsers = prev.filter((u) => u.id !== userToDelete.id);
+        const nextTotalPages = Math.max(1, Math.ceil(nextUsers.length / USERS_PER_PAGE));
+
+        setCurrentPage((prevPage) => Math.min(prevPage, nextTotalPages));
+        return nextUsers;
+      });
+      setUserToDelete(null);
+    } catch (err) {
+      console.error("Error al eliminar usuario:", err);
+    } finally {
+      setDeletingUser(false);
     }
   };
 
@@ -118,8 +141,14 @@ export default function AdminUsuarios() {
                     Cargando usuarios...
                   </td>
                 </tr>
+              ) : paginatedUsers.length === 0 ? (
+                <tr>
+                  <td colSpan="3" className="px-6 py-4 text-center text-sm text-slate-500">
+                    No hay usuarios en esta página.
+                  </td>
+                </tr>
               ) : (
-              users.slice((currentPage - 1) * USERS_PER_PAGE, currentPage * USERS_PER_PAGE).map((user) => (
+              paginatedUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-50/50 transition-colors duration-150">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
@@ -148,7 +177,7 @@ export default function AdminUsuarios() {
                         </svg>
                       </button>
                       <button 
-                        onClick={() => handleDelete(user.id)}
+                        onClick={() => askDeleteUser(user)}
                         className="p-2 hover:bg-red-50 text-red-500 rounded-lg transition-colors"
                         title="Eliminar"
                       >
@@ -169,7 +198,7 @@ export default function AdminUsuarios() {
       {users.length > USERS_PER_PAGE && (
         <div className="flex items-center justify-between mt-4 px-1">
           <span className="text-sm text-slate-500">
-            Página {currentPage} de {Math.ceil(users.length / USERS_PER_PAGE)}
+            Página {currentPage} de {totalPages}
           </span>
           <div className="flex gap-2">
             <button
@@ -179,7 +208,7 @@ export default function AdminUsuarios() {
             >
               ← Anterior
             </button>
-            {Array.from({ length: Math.ceil(users.length / USERS_PER_PAGE) }, (_, i) => i + 1).map((page) => (
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
               <button
                 key={page}
                 onClick={() => setCurrentPage(page)}
@@ -193,8 +222,8 @@ export default function AdminUsuarios() {
               </button>
             ))}
             <button
-              onClick={() => setCurrentPage((p) => Math.min(p + 1, Math.ceil(users.length / USERS_PER_PAGE)))}
-              disabled={currentPage === Math.ceil(users.length / USERS_PER_PAGE)}
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages}
               className="px-3 py-1.5 rounded-lg border border-slate-300 text-sm text-slate-600 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
             >
               Siguiente →
@@ -222,6 +251,20 @@ export default function AdminUsuarios() {
           </div>
         </div>
       )}
+
+      <ActionDialog
+        open={Boolean(userToDelete)}
+        title="Eliminar usuario"
+        message={userToDelete
+          ? `¿Seguro que querés eliminar a ${userToDelete.username}? Esta acción no se puede deshacer.`
+          : ''}
+        confirmText="Eliminar"
+        cancelText="Cancelar"
+        confirmVariant="danger"
+        loading={deletingUser}
+        onConfirm={handleDeleteConfirm}
+        onClose={() => setUserToDelete(null)}
+      />
     </div>
   );
 }
