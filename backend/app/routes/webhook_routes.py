@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from ..models import Order, User, db
+from ..models import Order, User, Product, OrderProduct, db
 from ..extensions import socketio
 
 webhook_bp = Blueprint('webhooks', __name__)
@@ -32,12 +32,71 @@ def _validated_armador(value):
         return None, f'Armador "{armador}" no existe'
     return armador, None
 
+
+def _parse_int(value, default=0):
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _has_products_payload(data):
+    return 'productos' in data or 'products' in data
+
+
+def _products_payload(data):
+    if 'productos' in data:
+        return data.get('productos') or []
+    if 'products' in data:
+        return data.get('products') or []
+    return []
+
+
+def _build_order_products(raw_items):
+    if raw_items is None:
+        return [], None
+    if not isinstance(raw_items, list):
+        return None, 'productos/products debe ser una lista'
+
+    items = []
+    for idx, raw in enumerate(raw_items, start=1):
+        if not isinstance(raw, dict):
+            return None, f'Item #{idx} inválido: debe ser un objeto'
+
+        product_id = raw.get('productId', raw.get('productoId'))
+        if product_id is None:
+            return None, f'Item #{idx} inválido: productId es requerido'
+
+        product = Product.query.get(product_id)
+        if not product:
+            return None, f'Item #{idx} inválido: producto {product_id} no existe'
+
+        quantity_ordered = _parse_int(raw.get('quantityOrdered', raw.get('cantidad', 1)), 1)
+        quantity_delivered = _parse_int(raw.get('quantityDelivered', raw.get('cantidadEntregada', 0)), 0)
+        if quantity_ordered < 0 or quantity_delivered < 0:
+            return None, f'Item #{idx} inválido: cantidades no pueden ser negativas'
+
+        items.append(
+            OrderProduct(
+                product_id=product.id,
+                quantity_ordered=quantity_ordered,
+                quantity_delivered=quantity_delivered,
+                ubication=raw.get('ubication') or product.default_ubication
+            )
+        )
+
+    return items, None
+
 @webhook_bp.route('/webhook/order', methods=['POST'])
 def webhook_new_order():
-    data = request.json
+    data = request.json or {}
     armo_pedido, armador_error = _validated_armador(data.get('armoPedido'))
     if armador_error:
         return jsonify({'error': armador_error}), 400
+
+    product_items, product_error = _build_order_products(_products_payload(data))
+    if product_error:
+        return jsonify({'error': product_error}), 400
 
     new_order = Order(
         id=data.get('id'),
@@ -50,6 +109,11 @@ def webhook_new_order():
         partial_delivery=_as_bool(data.get('partialDelivery', False))
     )
     db.session.add(new_order)
+
+    for item in product_items:
+        item.order_id = new_order.id
+        db.session.add(item)
+
     db.session.commit()
     
     socketio.emit('order_created', new_order.to_dict())
@@ -57,7 +121,7 @@ def webhook_new_order():
 
 @webhook_bp.route('/webhook/order-update', methods=['POST'])
 def webhook_update_order():
-    data = request.json
+    data = request.json or {}
     order = Order.query.get(data.get('id'))
     if not order: return jsonify({'error': 'Order not found'}), 404
 
@@ -70,6 +134,16 @@ def webhook_update_order():
         order.armo_pedido = armo_pedido
     if 'partialDelivery' in data:
         order.partial_delivery = _as_bool(data.get('partialDelivery'))
+
+    if _has_products_payload(data):
+        product_items, product_error = _build_order_products(_products_payload(data))
+        if product_error:
+            return jsonify({'error': product_error}), 400
+
+        OrderProduct.query.filter_by(order_id=order.id).delete(synchronize_session=False)
+        for item in product_items:
+            item.order_id = order.id
+            db.session.add(item)
     
     db.session.commit()
     socketio.emit('order_updated', order.to_dict())
