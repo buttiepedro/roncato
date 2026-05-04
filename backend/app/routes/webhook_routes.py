@@ -1,6 +1,7 @@
 from flask import Blueprint, request, jsonify
 from ..models import Order, User, Product, OrderProduct, db
 from ..extensions import socketio
+import json
 
 webhook_bp = Blueprint('webhooks', __name__)
 
@@ -68,6 +69,14 @@ def _products_payload(data):
 def _build_order_products(raw_items):
     if raw_items is None:
         return [], None
+
+    # n8n can send productos as JSON string if toJsonString() is used.
+    if isinstance(raw_items, str):
+        try:
+            raw_items = json.loads(raw_items)
+        except json.JSONDecodeError:
+            return None, 'productos/products no tiene JSON valido'
+
     if not isinstance(raw_items, list):
         return None, 'productos/products debe ser una lista'
 
@@ -76,9 +85,13 @@ def _build_order_products(raw_items):
         if not isinstance(raw, dict):
             return None, f'Item #{idx} inválido: debe ser un objeto'
 
-        product_id = raw.get('productId', raw.get('productoId'))
+        product_id = raw.get('productId', raw.get('productoId', raw.get('id')))
         if product_id is None:
             return None, f'Item #{idx} inválido: productId es requerido'
+
+        product_id = _parse_int(product_id, None)
+        if product_id is None:
+            return None, f'Item #{idx} inválido: productId debe ser numerico'
 
         product = Product.query.get(product_id)
         if not product:
