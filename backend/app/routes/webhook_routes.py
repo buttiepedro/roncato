@@ -135,6 +135,7 @@ def webhook_new_order():
         partial_delivery=_as_bool(data.get('partialDelivery', False))
     )
     db.session.add(new_order)
+    db.session.flush()
 
     for item in product_items:
         item.order_id = new_order.id
